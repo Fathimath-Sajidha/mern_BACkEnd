@@ -1,7 +1,6 @@
 const express = require('express');
 const path = require('path');
 const userRouter = require('./Router/user');
-const productsRouter = require('./Router/products');
 const DBconnect = require('./Config/db');
 const cors=require('cors')
 
@@ -23,7 +22,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/user', userRouter);
-app.use('/products', productsRouter);
+
 
 // Handle undefined routes
 app.use((req, res, next) => {

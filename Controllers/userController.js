@@ -1,95 +1,39 @@
-const express=require('express')
-const {user} = require('../store')
-const USER=require('../Model/user')
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const USER = require('../Model/user');
+require('dotenv').config(); // To use environment variables
+
+// Load environment variables
+const SECRET_KEY = process.env.JWT_SECRET_KEY || "your_secret_key"; // Change with your .env value
 
 
-const getAllUsers = (req, res, next) => {
-    res.status(200).json({ data: user });
-};
 
-const getParticularUser = (req, res, next) => {
-    const userId = parseInt(req.params.id);
-    let userFound = null;
-    
-    for (let i = 0; i < user.length; i++) {
-        if (user[i].id === userId) {
-            userFound = user[i];
-            break;
-        }
-    }
-
-    if (userFound) {
-        res.status(200).json({ data: userFound });
-    } else {
-        res.status(404).json({ message: 'User not found' });
-    }
-};
-const addUser=(req,res,next)=>{
-    const newUser={
-        id:user.length+1,
-        first_name:req.body.first_name,
-        last_name:req.body.last_name,
-        email:req.body.email,
-        password:req.body.password
-    };
-    user.push(newUser);
-    res.status(201).json({message:'new user added successfully',data:newUser});
-}
-const updateUser = (req, res) => {
-    const userId = parseInt(req.params.id);
-    const { first_name, last_name, email, password } = req.body;
-
-    
-    const userFound = user.find(u => u.id === userId);
-
-    if (!userFound) {
-        return res.status(404).json({ message: 'User not found' });
-    }
-
-    
-    console.log('Before update:', user);
-
-   
-    Object.assign(userFound, { first_name, last_name, email, password });
-
-    
-    console.log('After update:', userFound);
-
-    
-    res.status(200).json({ message: 'User updated successfully', data: userFound });
-};
-
-const userLogin=(req,res,next)=>{
-    console.log(req.body)
-    if(username===req.body.username){
-       if(password===req.body.password){
-        res.status(200).json({message:'login successful'})
-       }
-       else{
-        res.status(403).json({message:'invalid credentials'})
-       }
-    }
-    else {
-        res.status(403).json({message:'invalid credentials'})
-    }
-
-   
-}
-
-const jwt = require("jsonwebtoken");
-const SECRET_KEY = "your_secret_key"; // Replace with a secure key
-
-// Inside your login/signup controller
+ 
 const userSignUp = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Add user to the database
-    const newUser = await USER.create({ name, email, password });
+    // Check if user already exists
+    const existingUser = await USER.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // Hash password before saving
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new user
+    const newUser = await USER.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
 
     // Generate JWT token
     const token = jwt.sign({ id: newUser._id }, SECRET_KEY, { expiresIn: "1h" });
 
+    // Send response with the token
     res.status(201).json({
       message: "Signup successful",
       data: newUser,
@@ -100,8 +44,53 @@ const userSignUp = async (req, res) => {
   }
 };
 
+// Login logic
+const userLogin = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Find the user by email
+        const user = await USER.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Check if the password matches
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: "Invalid credentials" });
+        }
+
+        // Create a JWT token
+        const token = jwt.sign({ id: user._id }, SECRET_KEY, { expiresIn: '1h' });
+
+        res.status(200).json({
+            message: "Login successful",
+            token, // Send the token back to the client
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server error", error });
+    }
+};
 
 
 
+const authenticateToken = (req, res, next) => {
+    const token = req.header("Authorization")?.split(" ")[1]; // Expect "Bearer <token>"
+    if (!token) {
+        return res.status(403).json({ message: "Access Denied" });
+    }
 
-module.exports={userLogin,userSignUp,getAllUsers,getParticularUser,addUser,updateUser,userSignUp}
+    jwt.verify(token, SECRET_KEY, (err, user) => {
+        if (err) {
+            return res.status(403).json({ message: "Invalid Token" });
+        }
+        req.user = user; // Attach the user data to the request object
+        next();
+    });
+};
+
+
+
+module.exports = { userSignUp, userLogin, authenticateToken };
