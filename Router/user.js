@@ -11,7 +11,7 @@ router.post('/signup',userSignUp)
 router.post('/login',(req,res)=>{
     console.log(req.body);
      
-    USER.findOne({name:req.body.username}).then((data)=>{
+    USER.findOne({name:req.body.name}).then((data)=>{
 
 
     }).catch((err)=>{

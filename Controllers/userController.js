@@ -1,6 +1,8 @@
 const express=require('express')
 const {user} = require('../store')
 const USER=require('../Model/user')
+
+
 const getAllUsers = (req, res, next) => {
     res.status(200).json({ data: user });
 };
@@ -74,31 +76,31 @@ const userLogin=(req,res,next)=>{
    
 }
 
-const userSignUp = (req, res) => {
-    const { name, age, email, Rollno } = req.body; 
-console.log(req.body)
-    
-     USER({
-        name:req.body.username,
+const jwt = require("jsonwebtoken");
+const SECRET_KEY = "your_secret_key"; // Replace with a secure key
 
-        
-        email: req.body.email,
-        password:req.body.password
-    }).save()  
-    .then((resp) => {
-        res.status(200).json({
-            message: 'sign up successful',
-            data: resp 
-        });
-    })
-    .catch((err) => {
-        console.log(err);
-        res.status(500).json({
-            message: 'sign up failed',
-            error: err
-        });
+// Inside your login/signup controller
+const userSignUp = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    // Add user to the database
+    const newUser = await USER.create({ name, email, password });
+
+    // Generate JWT token
+    const token = jwt.sign({ id: newUser._id }, SECRET_KEY, { expiresIn: "1h" });
+
+    res.status(201).json({
+      message: "Signup successful",
+      data: newUser,
+      token, // Send the token
     });
+  } catch (error) {
+    res.status(500).json({ message: "Signup failed", error });
+  }
 };
+
+
 
 
 
