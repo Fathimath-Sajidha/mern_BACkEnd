@@ -10,7 +10,12 @@ const app = express();
 
 
 DBconnect();
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000', // Allow requests only from your frontend
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
+  credentials: true, // Allow cookies if needed
+}));
+
 
 
 app.use(express.json());

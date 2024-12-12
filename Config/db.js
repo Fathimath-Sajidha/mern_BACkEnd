@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const DBconnect = async () => {
-    const mongoDB_URI = 'mongodb://127.0.0.1:27017/e42ecommerce';
+    const mongoDB_URI = 'mongodb://127.0.0.1:27017/JWTLogin';
 
 
     try {
